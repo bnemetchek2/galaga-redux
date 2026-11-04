@@ -11,15 +11,15 @@
 import * as THREE from 'three';
 import { spritePixels, type SpriteKey } from '../classic/sprites.js';
 
-const DEPTH_BASE = 2.6;
+const DEPTH_BASE = 2.2;
 const DEPTH_STEP = 0.5;
 const BEVEL = 0.42;
 
 /** Supersampling factor for contour extraction. */
 const SS = 4;
 /** Contour relaxation passes, in supersampled units. */
-const SMOOTH_PASSES = 3;
-const SMOOTH_STRENGTH = 0.45;
+const SMOOTH_PASSES = 0;
+const SMOOTH_STRENGTH = 0.22;
 
 /** Palette colours brighter than this get the unlit "glow" treatment. */
 const GLOW_LUMINANCE = 0.72;
@@ -321,4 +321,6 @@ export function shipGeometries(key: SpriteKey): ShipGeometry {
   cache.set(key, result);
   return result;
 }
+
+
 

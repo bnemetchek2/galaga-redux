@@ -182,7 +182,7 @@ export class EnhancedRenderer implements GameRenderer {
     scene.add(this.particles.points);
 
     this.playerGroup = createShip('player');
-    this.playerGroup.scale.setScalar(1.45);
+    this.playerGroup.scale.setScalar(1.12);
     scene.add(this.playerGroup);
 
     this.buildBulletPools(scene);
@@ -592,10 +592,10 @@ export class EnhancedRenderer implements GameRenderer {
       group.position.y = worldY(enemy.y);
       group.position.z = enemy.state === 'formation' ? -enemy.row * 4 : 4;
       group.rotation.z = -enemy.angle;
-      group.rotation.x = -0.34;
+      group.rotation.x = -0.22;
       group.rotation.y = Math.sin(this.time * 2 + enemy.phase) * 0.08 - enemy.angle * 0.4;
 
-      const scale = enemy.kind === 'boss' ? 1.62 : enemy.kind === 'butterfly' ? 1.28 : 1.36;
+      const scale = enemy.kind === 'boss' ? 1.06 : enemy.kind === 'butterfly' ? 1.0 : 1.02;
       const pulse = enemy.flash > 0 ? 1.18 : 1;
       group.scale.setScalar(scale * pulse);
 
@@ -631,7 +631,7 @@ export class EnhancedRenderer implements GameRenderer {
     if (!this.twinGroup && this.scene) {
       const twinGroup = createShip('player');
       twinGroup.name = 'twin';
-      twinGroup.scale.setScalar(1.45);
+      twinGroup.scale.setScalar(1.12);
       twinGroup.visible = false;
       this.scene.add(twinGroup);
       this.twinGroup = twinGroup;
@@ -875,6 +875,8 @@ export class EnhancedRenderer implements GameRenderer {
 }
 
 export { PALETTES };
+
+
 
 
 

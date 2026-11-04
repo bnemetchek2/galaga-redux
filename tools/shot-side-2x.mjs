@@ -1,0 +1,16 @@
+import puppeteer from "puppeteer-core";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const browser = await puppeteer.connect({ browserURL: "http://127.0.0.1:9223", defaultViewport: null });
+const page = await browser.newPage();
+await page.setViewport({ width: 1600, height: 960, deviceScaleFactor: 2 });
+await page.goto("http://127.0.0.1:4173/?view=side", { waitUntil: "domcontentloaded", timeout: 60000 });
+await page.waitForFunction("window.__galaga !== undefined", { timeout: 20000 });
+await page.evaluate(() => window.__galaga.setInput("start1", true));
+await sleep(150);
+await page.evaluate(() => window.__galaga.setInput("start1", false));
+await page.waitForFunction(() => window.__galaga.engine.enemies.filter((e) => e.state === "formation").length >= 20, { timeout: 40000 });
+await sleep(300);
+await page.screenshot({ path: "shots/ships-side-2x.png", clip: { x: 20, y: 130, width: 1560, height: 700 } });
+console.log(JSON.stringify(await page.evaluate(() => ({ parked: window.__galaga.engine.enemies.filter((e) => e.state === "formation").length }))));
+await page.close();
+browser.disconnect();
