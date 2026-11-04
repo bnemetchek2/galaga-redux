@@ -10,6 +10,9 @@ right, down to the sub-pixel.
 
 ![Side by side](docs/media/side-by-side.png)
 
+**Live:** <https://galaga-redux.kindof-lame.workers.dev> — deployed as the
+Cloudflare Worker `galaga-redux`.
+
 ## What it does
 
 Three view modes, switchable at any time without interrupting play:
@@ -64,8 +67,11 @@ a `CLOUDFLARE_API_TOKEN` with **Workers Scripts:Edit** and **Account:Read**.
 The deployed site lives at:
 
 ```
-https://galaga-redux.<your-subdomain>.workers.dev
+https://galaga-redux.kindof-lame.workers.dev
 ```
+
+Worker: `galaga-redux` · account `Bnemetchek@gmail.com's Account` · assets served
+from `dist/`.
 
 
 ## Controls
