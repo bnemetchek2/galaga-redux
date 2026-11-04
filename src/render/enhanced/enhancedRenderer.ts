@@ -699,6 +699,7 @@ export class EnhancedRenderer implements GameRenderer {
   }
 
   private updateBeam(engine: GalagaEngine, dt: number): void {
+    void dt;
     const mesh = this.beamMesh;
     const material = this.beamMaterial;
     if (!mesh || !material) return;
@@ -720,7 +721,6 @@ export class EnhancedRenderer implements GameRenderer {
       this.beamLight.position.set(worldX(beam.x), worldY(beam.y) - length * 0.4, 40);
       this.beamLight.intensity = 700 * intensity;
     }
-    void dt;
   }
 
   private updateExplosions(engine: GalagaEngine, step: number): void {
@@ -780,7 +780,7 @@ export class EnhancedRenderer implements GameRenderer {
 
   private updateCamera(engine: GalagaEngine, dt: number): void {
     if (!this.camera) return;
-    const shakeAmount = this.shake * 7;
+    const shakeAmount = dt > 0 ? this.shake * 7 : 0;
     // A little parallax toward the fighter: the whole scene leans with you.
     const parallax = (engine.player.x - SCREEN_W / 2) * 0.07;
     const pull =
@@ -790,7 +790,6 @@ export class EnhancedRenderer implements GameRenderer {
     this.camera.position.y = -130 + (Math.random() - 0.5) * shakeAmount;
     this.camera.position.z = this.cameraDistance * (1 + pull * 0.15);
     this.camera.lookAt(0, -10 + pull * 18 - this.shake * 5, 0);
-    void dt;
   }
 
   private updateHud(engine: GalagaEngine): void {

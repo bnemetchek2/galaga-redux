@@ -157,7 +157,25 @@ function setKey(code: string, down: boolean): void {
   engine.setInput(action, down);
 }
 
+const MODIFIER_KEYS = new Set([
+  'ShiftLeft',
+  'ShiftRight',
+  'ControlLeft',
+  'ControlRight',
+  'AltLeft',
+  'AltRight',
+  'MetaLeft',
+  'MetaRight',
+]);
+
 window.addEventListener('keydown', (event) => {
+  // While paused, any key resumes and is consumed, so it cannot also fire a
+  // shot or nudge the ship.
+  if (paused && !MODIFIER_KEYS.has(event.code)) {
+    event.preventDefault();
+    setPaused(false);
+    return;
+  }
   if (PREVENT_DEFAULT.has(event.code)) event.preventDefault();
   if (event.repeat) {
     setKey(event.code, true);
@@ -200,6 +218,18 @@ window.addEventListener('blur', () => {
   for (const action of ['left', 'right', 'fire'] as const) engine.setInput(action, false);
 });
 
+// A click anywhere (except the pause button itself) resumes play.
+window.addEventListener(
+  'pointerdown',
+  (event) => {
+    if (!paused) return;
+    const target = event.target as HTMLElement | null;
+    if (target && target.closest('#pause-toggle')) return;
+    setPaused(false);
+  },
+  true,
+);
+
 function bindTouchControls(): void {
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-control]'));
   for (const button of buttons) {
@@ -231,12 +261,22 @@ function bindTouchControls(): void {
 
 // -------------------------------------------------------------------- toggles --
 
-function togglePause(): void {
-  paused = !paused;
+function setPaused(next: boolean): void {
+  if (paused === next) return;
+  paused = next;
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
   pauseButton.classList.toggle('is-active', paused);
   document.body.classList.toggle('is-paused', paused);
   pauseVeil.classList.toggle('is-visible', paused);
+  pauseVeil.setAttribute('aria-hidden', String(!paused));
+  if (paused) {
+    // Drop any held inputs so the ship does not drift when play resumes.
+    for (const action of ['left', 'right', 'fire'] as const) engine.setInput(action, false);
+  }
+}
+
+function togglePause(): void {
+  setPaused(!paused);
 }
 
 function toggleSound(): void {
@@ -396,8 +436,10 @@ function tick(now: number): void {
   }
 
   // Renderers get the wall-clock delta, scaled by the simulation speed, so
-  // effects age at the same rate as the game when fast-forwarding.
-  const renderDt = Math.min(0.5, dt * speed);
+  // effects age at the same rate as the game when fast-forwarding. While paused
+  // they get zero, which freezes the starfield, particles and camera too -- a
+  // pause that still animates does not look paused.
+  const renderDt = paused ? 0 : Math.min(0.5, dt * speed);
   if (rendererVisible('classic')) ensureRenderer('classic').render(engine, renderDt);
   if (rendererVisible('enhanced')) ensureRenderer('enhanced').render(engine, renderDt);
 

@@ -95,7 +95,7 @@ manager. `tools/verify-github.mjs` checks what actually landed on the remote.
 | `E` | **Expert demo** — hand the controls to the autopilot |
 | `B` | **No-fire bug** — jam every enemy shot slot |
 | `M` | Mute / unmute |
-| `P` or `Esc` | Pause |
+| `P` or `Esc` | Pause — **any key or a click resumes** |
 
 Touch devices get on-screen start, move and fire buttons.
 

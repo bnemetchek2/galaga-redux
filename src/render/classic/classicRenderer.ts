@@ -57,6 +57,7 @@ export class ClassicRenderer implements GameRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
   private stars: StarDot[] = [];
   private scroll = 0;
+  private time = 0;
   private shake = 0;
   private lastLives = 3;
   private lastVisible = false;
@@ -109,6 +110,7 @@ export class ClassicRenderer implements GameRenderer {
     // starfield would smear into a solid streak.
     const step = Math.min(dt, 0.05);
     this.blink += step;
+    this.time += step;
 
     if (engine.lives < this.lastLives) this.shake = Math.min(1, this.shake + 0.9);
     this.lastLives = engine.lives;
@@ -230,8 +232,9 @@ export class ClassicRenderer implements GameRenderer {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Sweeping rings travelling down the beam.
-    const t = performance.now() / 1000;
+    // Sweeping rings travelling down the beam. Uses the renderer's own clock
+    // (not wall time) so a paused frame is genuinely frozen.
+    const t = this.time;
     for (let i = 0; i < 5; i++) {
       const p = ((t * 0.55 + i / 5) % 1) * beam.intensity;
       const w = 3 + (half - 3) * p;

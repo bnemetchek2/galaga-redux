@@ -601,6 +601,22 @@ body.is-ready .pane {
 
 .pause-veil.is-visible {
   opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* A paused game should look stopped: no CRT flicker, no blinking badges. */
+body.is-paused .classic-frame,
+body.is-paused .enh-badge,
+body.is-paused .slot,
+body.is-paused .slots__jam,
+body.is-paused .enh-banner {
+  animation-play-state: paused;
+}
+
+body.is-paused .enh-canvas,
+body.is-paused .classic-canvas {
+  filter: saturate(0.85);
 }
 
 .pause-veil__card {
