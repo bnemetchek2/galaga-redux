@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Galaga reimplemented on a single deterministic engine, rendered twice: authentic pixel art and a Three.js enhanced view."
+    />
+    <title>GALAGA · one engine, two renderers</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23070a18'/%3E%3Cpath d='M16 5l6 21-6-5-6 5z' fill='%235ee7ff'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.js",
+          "three/examples/jsm/": "./vendor/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body data-mode="side">
+    <div class="aura" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__mark" aria-hidden="true">G</div>
+        <div class="brand__text">
+          <h1>GALAGA</h1>
+          <p>one engine · two renderers</p>
+        </div>
+      </div>
+
+      <nav class="modes" aria-label="View mode">
+        <button type="button" class="mode-btn" data-mode="classic">Classic</button>
+        <button type="button" class="mode-btn" data-mode="enhanced">Enhanced</button>
+        <button type="button" class="mode-btn is-active" data-mode="side">Side by side</button>
+      </nav>
+
+      <div class="tools">
+        <button type="button" id="speed-toggle" class="tool-btn tool-btn--speed" title="Simulation speed (T)">
+          1× speed
+        </button>
+        <button
+          type="button"
+          id="demo-toggle"
+          class="tool-btn"
+          aria-pressed="false"
+          title="Watch the expert pilot play (E)"
+        >
+          Expert demo
+        </button>
+        <button
+          type="button"
+          id="no-fire-toggle"
+          class="tool-btn"
+          aria-pressed="false"
+          title="Jam every enemy shot slot, as the arcade bug does (B)"
+        >
+          No-fire bug
+        </button>
+        <button type="button" id="sound-toggle" class="tool-btn" aria-pressed="true">Sound on</button>
+        <button type="button" id="pause-toggle" class="tool-btn" aria-pressed="false">Pause</button>
+      </div>
+    </header>
+
+    <main class="stage" id="stage">
+      <section class="pane pane--classic" aria-label="Classic pixel-art view">
+        <div class="pane__head">
+          <span class="tag tag--amber">01 · Arcade</span>
+          <span class="pane__meta">224 × 288 · canvas 2d</span>
+        </div>
+        <div class="screen screen--classic" id="classic-mount">
+          <div class="crt" aria-hidden="true"></div>
+        </div>
+        <div class="pane__foot">
+          <span>original pixel sprites</span>
+          <span>CRT overlay</span>
+        </div>
+      </section>
+
+      <section class="pane pane--enhanced" aria-label="Enhanced three-dimensional view">
+        <div class="pane__head">
+          <span class="tag tag--cyan">02 · Enhanced</span>
+          <span class="pane__meta">three.js · bloom</span>
+        </div>
+        <div class="screen screen--enhanced" id="enhanced-mount"></div>
+        <div class="pane__foot">
+          <span>3d ships · particles</span>
+          <span>volumetric beam</span>
+        </div>
+      </section>
+
+      <div class="pause-veil" id="pause-veil" aria-live="polite">
+        <div class="pause-veil__card">
+          <strong>PAUSED</strong>
+          <span>press P to resume</span>
+        </div>
+      </div>
+    </main>
+
+    <footer class="statusbar">
+      <div class="statusbar__keys">
+        <span class="hint"><kbd>←</kbd><kbd>→</kbd><span>move</span></span>
+        <span class="hint"><kbd>Ctrl</kbd><span>fire</span></span>
+        <span class="hint"><kbd>1</kbd><kbd>2</kbd><span>start</span></span>
+        <span class="hint"><kbd>V</kbd><span>view</span></span>
+        <span class="hint hint--optional"><kbd>E</kbd><span>demo</span></span>
+        <span class="hint hint--optional"><kbd>T</kbd><span>speed</span></span>
+        <span class="hint hint--optional"><kbd>B</kbd><span>bug</span></span>
+        <span class="hint hint--optional"><kbd>M</kbd><span>sound</span></span>
+        <span class="hint"><kbd>P</kbd><span>pause</span></span>
+      </div>
+      <div class="statusbar__progress" id="progress">
+        <span class="progress__label">STAGE <b id="stage-value">1</b><span class="progress__max">/ 255</span></span>
+        <span class="progress__track"><i class="progress__fill" id="progress-fill"></i></span>
+      </div>
+      <div class="statusbar__slots" id="slots" aria-label="Enemy shot slots"></div>
+      <div class="statusbar__sync" id="sync">starting engine…</div>
+    </footer>
+
+    <div class="touch" id="touch">
+      <div class="touch__start">
+        <button type="button" data-start="1">1 player</button>
+        <button type="button" data-start="2">2 players</button>
+      </div>
+      <div class="touch__pad">
+        <button type="button" data-control="left" aria-label="Move left">◀</button>
+        <button type="button" data-control="fire" class="touch__fire" aria-label="Fire">FIRE</button>
+        <button type="button" data-control="right" aria-label="Move right">▶</button>
+      </div>
+    </div>
+
+    <script type="module" src="./src/app/main.js"></script>
+  </body>
+</html>

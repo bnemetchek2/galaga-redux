@@ -1,0 +1,25 @@
+{
+  "name": "galaga-dual-view",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A faithful Galaga reimplementation on one deterministic engine, rendered twice: authentic pixel art and a Three.js enhanced view.",
+  "scripts": {
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/build.ps1",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/build.ps1 && node tools/serve.mjs",
+    "deploy": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/deploy.ps1",
+    "serve": "node tools/serve.mjs",
+    "test": "node dist/tests/engine.test.js",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    "cf:whoami": "node node_modules/wrangler/wrangler-dist/cli.js whoami"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "puppeteer-core": "^24.0.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.157.0"
+  }
+}

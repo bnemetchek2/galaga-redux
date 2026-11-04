@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.npm-cache/
+.tmp/
+.edge-profile/
+.edge-profile-2/
+shots/
+reference/
+.acl-recovery/
+.wrangler/
+.dev.vars
+*.log

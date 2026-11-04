@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer-core";
+const browser = await puppeteer.connect({ browserURL: "http://127.0.0.1:9223", defaultViewport: null });
+const page = await browser.newPage();
+await page.setViewport({ width: 1600, height: 960 });
+await page.goto("http://127.0.0.1:4173/?view=side", { waitUntil: "networkidle2" });
+await page.waitForFunction("window.__galaga !== undefined");
+await new Promise((r) => setTimeout(r, 800));
+await page.screenshot({ path: "shots/layout-1600.png" });
+await page.close();
+browser.disconnect();
+console.log("ok");
