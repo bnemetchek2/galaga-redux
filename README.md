@@ -12,6 +12,7 @@ right, down to the sub-pixel.
 
 **Live:** <https://galaga-redux.kindof-lame.workers.dev> — deployed as the
 Cloudflare Worker `galaga-redux`.
+**Source:** <https://github.com/bnemetchek2/galaga-redux>.
 
 ## What it does
 
