@@ -74,6 +74,13 @@ https://galaga-redux.kindof-lame.workers.dev
 Worker: `galaga-redux` · account `Bnemetchek@gmail.com's Account` · assets served
 from `dist/`.
 
+### Source
+
+The repository is at <https://github.com/bnemetchek2/galaga-redux> (branch
+`main`). `tools/create-github-repo.mjs` creates it through the GitHub API when
+`GH_TOKEN` is set; ordinary `git push` then uses the machine's credential
+manager. `tools/verify-github.mjs` checks what actually landed on the remote.
+
 
 ## Controls
 

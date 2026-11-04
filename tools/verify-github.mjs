@@ -1,0 +1,12 @@
+const repo = "bnemetchek2/galaga-redux";
+const j = async (u) => (await fetch(u, { headers: { "user-agent": "verify", accept: "application/vnd.github+json" } })).json();
+const info = await j(`https://api.github.com/repos/${repo}`);
+console.log("repo:", info.full_name, "| visibility:", info.visibility, "| default:", info.default_branch, "| size:", info.size + "KB");
+const tree = await j(`https://api.github.com/repos/${repo}/git/trees/${info.default_branch}?recursive=1`);
+const files = tree.tree.filter((t) => t.type === "blob");
+console.log("files:", files.length, "| has node_modules:", files.some((f) => f.path.startsWith("node_modules/")), "| has dist:", files.some((f) => f.path.startsWith("dist/")));
+console.log("src files:", files.filter((f) => f.path.startsWith("src/")).length, "| media:", files.filter((f) => f.path.startsWith("docs/media/")).length);
+const commits = await j(`https://api.github.com/repos/${repo}/commits?per_page=5`);
+console.log("commits:", commits.map((c) => c.sha.slice(0, 7) + " " + c.commit.message.split("\n")[0]).join(" | "));
+const readme = await (await fetch(`https://raw.githubusercontent.com/${repo}/${info.default_branch}/README.md`)).text();
+console.log("readme has live url:", readme.includes("galaga-redux.kindof-lame.workers.dev"), "| has repo link:", readme.includes("github.com/bnemetchek2/galaga-redux"));
