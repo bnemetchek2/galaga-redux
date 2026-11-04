@@ -1,0 +1,23 @@
+import puppeteer from "puppeteer-core";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const browser = await puppeteer.connect({ browserURL: "http://127.0.0.1:9223", defaultViewport: null });
+const page = await browser.newPage();
+const logs = [];
+page.on("pageerror", (e) => logs.push(`[pageerror] ${e.message}`));
+page.on("console", (m) => { if (m.type() === "error") logs.push(`[error] ${m.text()}`); });
+await page.setViewport({ width: 1600, height: 960, deviceScaleFactor: 1 });
+await page.goto("https://galaga-redux.kindof-lame.workers.dev/?view=enhanced", { waitUntil: "domcontentloaded", timeout: 60000 });
+await page.waitForFunction("window.__galaga !== undefined", { timeout: 25000 });
+await page.evaluate(() => window.__galaga.setInput("start1", true));
+await sleep(150);
+await page.evaluate(() => window.__galaga.setInput("start1", false));
+await page.waitForFunction(() => window.__galaga.engine.enemies.filter((e) => e.state === "formation").length >= 24, { timeout: 30000 });
+await sleep(400);
+await page.screenshot({ path: "shots/live-ships.png" });
+console.log(JSON.stringify(await page.evaluate(() => {
+  const e = window.__galaga.engine;
+  return { stage: e.stage, parked: e.enemies.filter((x) => x.state === "formation").length };
+})));
+console.log("LOGS", logs.slice(0, 5).join(" | ") || "(none)");
+await page.close();
+browser.disconnect();
