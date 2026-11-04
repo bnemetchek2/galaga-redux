@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "license": "MIT",
   "description": "A faithful Galaga reimplementation on one deterministic engine, rendered twice: authentic pixel art and a Three.js enhanced view.",
   "scripts": {
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/build.ps1",

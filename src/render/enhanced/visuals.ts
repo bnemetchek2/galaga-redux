@@ -7,6 +7,8 @@
 
 import * as THREE from 'three';
 
+import { shipHullGeometry } from './shipGeometry.js';
+
 // ---------------------------------------------------------------- textures --
 
 let glowTexture: THREE.CanvasTexture | null = null;
@@ -61,371 +63,53 @@ export const PALETTES: Record<'bee' | 'butterfly' | 'boss' | 'player', ShipPalet
   player: { hull: 0xd6e2ff, accent: 0xff3b3b, glow: 0x66ccff, core: 0xffffff },
 };
 
-// ------------------------------------------------------------------ shapes --
-
-function polyShape(points: Array<[number, number]>): THREE.Shape {
-  const shape = new THREE.Shape();
-  shape.moveTo(points[0][0], points[0][1]);
-  for (let i = 1; i < points.length; i++) shape.lineTo(points[i][0], points[i][1]);
-  shape.closePath();
-  return shape;
-}
-
-function extrude(shape: THREE.Shape, depth: number, bevel = 0.4): THREE.BufferGeometry {
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth,
-    bevelEnabled: true,
-    bevelSize: bevel,
-    bevelThickness: bevel,
-    bevelSegments: 1,
-    curveSegments: 4,
-  });
-  geometry.translate(0, 0, -depth / 2);
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-const geometryCache = new Map<string, THREE.BufferGeometry>();
-const materialCache = new Map<string, THREE.Material>();
-
-function cachedGeometry(key: string, build: () => THREE.BufferGeometry): THREE.BufferGeometry {
-  const cached = geometryCache.get(key);
-  if (cached) return cached;
-  const geometry = build();
-  geometryCache.set(key, geometry);
-  return geometry;
-}
-
-/** Cached standard material with an explicit glow. */
-function shipMaterial(
-  key: string,
-  color: number,
-  emissive: number,
-  intensity: number,
-  metalness = 0.7,
-  roughness = 0.32,
-): THREE.MeshStandardMaterial {
-  const cached = materialCache.get(key);
-  if (cached) return cached as THREE.MeshStandardMaterial;
-  const material = new THREE.MeshStandardMaterial({
-    color,
-    emissive,
-    emissiveIntensity: intensity,
-    metalness,
-    roughness,
-  });
-  materialCache.set(key, material);
-  return material;
-}
-
-/** A thin wing plate, extruded so it has real thickness. */
-function wingPlate(points: Array<[number, number]>, thickness = 0.7): THREE.BufferGeometry {
-  return extrude(polyShape(points), thickness, 0.12);
-}
+// ------------------------------------------------------------------- ships --
 
 /**
- * Player fighter. Authored nose-up: a cone fuselage, dihedral wings, a glass
- * cockpit and twin engine flares.
+ * Ships are extruded from the classic pixel sprites themselves (see
+ * shipGeometry.ts), so the 3D fleet keeps the original silhouettes and colour
+ * layout: blue-winged bees, crimson butterflies, green flagships, the white
+ * arrow fighter. Metal, bevelled edges and an additive rim shell are the modern
+ * part.
  */
-function buildPlayer(palette: ShipPalette): THREE.Group {
-  const group = new THREE.Group();
+let hullMaterialRef: THREE.MeshStandardMaterial | null = null;
 
-  const hull = shipMaterial('player:hull', palette.hull, 0x3f6bff, 0.35, 0.85, 0.25);
-  const nose = cachedGeometry('player:nose', () => new THREE.ConeGeometry(2.9, 11, 6));
-  const fuselage = new THREE.Mesh(nose, hull);
-  fuselage.position.y = 1.6;
-  group.add(fuselage);
-
-  const rear = new THREE.Mesh(
-    cachedGeometry('player:rear', () => new THREE.BoxGeometry(5.4, 5.4, 2.6)),
-    hull,
-  );
-  rear.position.set(0, -4.2, 0);
-  group.add(rear);
-
-  const wingMat = shipMaterial('player:wing', 0xb9c8ff, 0xff3355, 0.7, 0.75, 0.3);
-  const wingR = cachedGeometry('player:wingR', () =>
-    wingPlate([
-      [0, 2.4],
-      [6.8, -0.4],
-      [7.6, -3.2],
-      [2.6, -4.2],
-      [0, -2.2],
-    ]),
-  );
-  const wingL = cachedGeometry('player:wingL', () =>
-    wingPlate([
-      [0, 2.4],
-      [-6.8, -0.4],
-      [-7.6, -3.2],
-      [-2.6, -4.2],
-      [0, -2.2],
-    ]),
-  );
-  const right = new THREE.Mesh(wingR, wingMat);
-  right.position.set(1.2, -1.4, 0);
-  right.rotation.y = -0.5;
-  right.rotation.z = -0.08;
-  group.add(right);
-
-  const left = new THREE.Mesh(wingL, wingMat);
-  left.position.set(-1.2, -1.4, 0);
-  left.rotation.y = 0.5;
-  left.rotation.z = 0.08;
-  group.add(left);
-
-  const cockpit = new THREE.Mesh(
-    cachedGeometry('player:cockpit', () => new THREE.SphereGeometry(1.55, 16, 12)),
-    shipMaterial('player:cockpit', 0x9fd8ff, 0x5ec8ff, 2.4, 0.2, 0.1),
-  );
-  cockpit.scale.set(1, 1.7, 0.85);
-  cockpit.position.set(0, 0.8, 1.4);
-  group.add(cockpit);
-
-  const engineMat = shipMaterial('player:engine', 0xffb066, 0xff8a2b, 2.6, 0.3, 0.4);
-  const engineGeo = cachedGeometry('player:engine', () => new THREE.CylinderGeometry(0.95, 1.15, 3, 8));
-  for (const side of [-1, 1]) {
-    const engine = new THREE.Mesh(engineGeo, engineMat);
-    engine.position.set(side * 1.9, -5.8, 0);
-    group.add(engine);
-    const flare = glowSprite(0xffb066, 9, 0.6);
-    flare.position.set(side * 1.9, -7.6, 0);
-    group.add(flare);
-  }
-
-  return group;
-}
-
-/** Bee drone: a tapered body with banded abdomen and angled blue wings. */
-function buildBee(): THREE.Group {
-  const group = new THREE.Group();
-
-  const bodyMat = shipMaterial('bee:body', 0xffc233, 0xff9d00, 0.45, 0.55, 0.4);
-  const body = new THREE.Mesh(
-    cachedGeometry('bee:body', () => new THREE.CylinderGeometry(0.9, 2.5, 8, 8)),
-    bodyMat,
-  );
-  group.add(body);
-
-  const bandMat = shipMaterial('bee:band', 0x2b1a05, 0x000000, 0, 0.6, 0.6);
-  const bandGeo = cachedGeometry('bee:band', () => new THREE.TorusGeometry(2.05, 0.38, 6, 14));
-  for (const y of [-1.6, 1.4]) {
-    const band = new THREE.Mesh(bandGeo, bandMat);
-    band.rotation.x = Math.PI / 2;
-    band.position.y = y;
-    group.add(band);
-  }
-
-  const headMat = shipMaterial('bee:head', 0x2b4bff, 0x1b3bff, 0.9, 0.5, 0.4);
-  const head = new THREE.Mesh(
-    cachedGeometry('bee:head', () => new THREE.SphereGeometry(2.05, 14, 10)),
-    headMat,
-  );
-  head.position.y = -4.6;
-  group.add(head);
-
-  const eyeMat = shipMaterial('bee:eye', 0xffffff, 0xaad4ff, 3, 0.1, 0.2);
-  const eyeGeo = cachedGeometry('bee:eye', () => new THREE.SphereGeometry(0.62, 8, 6));
-  for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(eyeGeo, eyeMat);
-    eye.position.set(side * 1.05, -4.9, 1.45);
-    group.add(eye);
-  }
-
-  const wingMat = shipMaterial('bee:wing', 0x3b6bff, 0x2b4bff, 0.85, 0.5, 0.25);
-  const wingR = cachedGeometry('bee:wingR', () =>
-    wingPlate([
-      [0, 3],
-      [3.8, 1],
-      [4.6, -1.8],
-      [1.6, -3.4],
-      [0, -2],
-    ]),
-  );
-  const wingL = cachedGeometry('bee:wingL', () =>
-    wingPlate([
-      [0, 3],
-      [-3.8, 1],
-      [-4.6, -1.8],
-      [-1.6, -3.4],
-      [0, -2],
-    ]),
-  );
-  const right = new THREE.Mesh(wingR, wingMat);
-  right.position.set(1.5, 0.6, 0);
-  right.rotation.y = -0.95;
-  right.rotation.z = -0.2;
-  group.add(right);
-
-  const left = new THREE.Mesh(wingL, wingMat);
-  left.position.set(-1.5, 0.6, 0);
-  left.rotation.y = 0.95;
-  left.rotation.z = 0.2;
-  group.add(left);
-
-  return group;
-}
-
-/** Butterfly raider: slender body, broad crimson wings with blue wing-eyes. */
-function buildButterfly(): THREE.Group {
-  const group = new THREE.Group();
-
-  const bodyMat = shipMaterial('butterfly:body', 0xf1f4ff, 0xff6b7f, 0.35, 0.6, 0.3);
-  const body = new THREE.Mesh(
-    cachedGeometry('butterfly:body', () => new THREE.CylinderGeometry(0.85, 1.7, 9, 8)),
-    bodyMat,
-  );
-  group.add(body);
-
-  const headMat = shipMaterial('butterfly:head', 0xd81f36, 0xff2b4a, 1.2, 0.5, 0.35);
-  const head = new THREE.Mesh(
-    cachedGeometry('butterfly:head', () => new THREE.SphereGeometry(1.7, 14, 10)),
-    headMat,
-  );
-  head.position.y = -5.1;
-  group.add(head);
-
-  const eyeMat = shipMaterial('butterfly:eye', 0x6fa8ff, 0x3a6bff, 2.6, 0.2, 0.2);
-  const eyeGeo = cachedGeometry('butterfly:eye', () => new THREE.SphereGeometry(0.55, 8, 6));
-  for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(eyeGeo, eyeMat);
-    eye.position.set(side * 0.95, -5.4, 1.2);
-    group.add(eye);
-  }
-
-  const wingMat = shipMaterial('butterfly:wing', 0xd81f36, 0xff2233, 0.55, 0.55, 0.3);
-  const wingR = cachedGeometry('butterfly:wingR', () =>
-    wingPlate([
-      [0, 3.6],
-      [5.6, 2.6],
-      [8.6, -0.4],
-      [6.8, -3.8],
-      [2.2, -4.2],
-      [0, -2],
-    ]),
-  );
-  const wingL = cachedGeometry('butterfly:wingL', () =>
-    wingPlate([
-      [0, 3.6],
-      [-5.6, 2.6],
-      [-8.6, -0.4],
-      [-6.8, -3.8],
-      [-2.2, -4.2],
-      [0, -2],
-    ]),
-  );
-  const right = new THREE.Mesh(wingR, wingMat);
-  right.position.set(1.1, 0.2, 0);
-  right.rotation.y = -0.62;
-  group.add(right);
-
-  const left = new THREE.Mesh(wingL, wingMat);
-  left.position.set(-1.1, 0.2, 0);
-  left.rotation.y = 0.62;
-  group.add(left);
-
-  // Wing eyes catch the bloom.
-  const spotMat = shipMaterial('butterfly:spot', 0x3a6bff, 0x3a6bff, 2.2, 0.2, 0.25);
-  const spotGeo = cachedGeometry('butterfly:spot', () => new THREE.SphereGeometry(1.05, 10, 8));
-  for (const side of [-1, 1]) {
-    const spot = new THREE.Mesh(spotGeo, spotMat);
-    spot.position.set(side * 5.1, 0.4, 0.9);
-    group.add(spot);
-  }
-
-  return group;
-}
-
-/** Flagship: hexagonal green hull, heavy blue wings and a spinning gold ring. */
-function buildBoss(): THREE.Group {
-  const group = new THREE.Group();
-
-  const hullMat = shipMaterial('boss:hull', 0x2fbf5a, 0x1f9e46, 0.5, 0.75, 0.28);
-  const body = new THREE.Mesh(
-    cachedGeometry('boss:body', () => new THREE.CylinderGeometry(2.2, 4.1, 10, 6)),
-    hullMat,
-  );
-  group.add(body);
-
-  const head = new THREE.Mesh(
-    cachedGeometry('boss:head', () => new THREE.SphereGeometry(2.6, 16, 12)),
-    shipMaterial('boss:head', 0x39d36b, 0x2fbf5a, 0.9, 0.6, 0.3),
-  );
-  head.position.y = -5.2;
-  group.add(head);
-
-  const eyeMat = shipMaterial('boss:eye', 0xff5cc8, 0xff5cc8, 2.8, 0.2, 0.2);
-  const eyeGeo = cachedGeometry('boss:eye', () => new THREE.SphereGeometry(0.7, 8, 6));
-  for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(eyeGeo, eyeMat);
-    eye.position.set(side * 1.4, -5.6, 2);
-    group.add(eye);
-  }
-
-  const crestMat = shipMaterial('boss:crest', 0xffd23f, 0xffb300, 1.4, 0.5, 0.3);
-  const crest = new THREE.Mesh(
-    cachedGeometry('boss:crest', () => new THREE.ConeGeometry(1.6, 4.2, 4)),
-    crestMat,
-  );
-  crest.position.y = 6.2;
-  group.add(crest);
-
-  const wingMat = shipMaterial('boss:wing', 0x3a4dff, 0x2b3bff, 0.7, 0.6, 0.3);
-  const wingR = cachedGeometry('boss:wingR', () =>
-    wingPlate([
-      [0, 4.2],
-      [7.2, 2.4],
-      [9.8, -1.4],
-      [7.2, -5.2],
-      [2.2, -5],
-      [0, -2.4],
-    ]),
-  );
-  const wingL = cachedGeometry('boss:wingL', () =>
-    wingPlate([
-      [0, 4.2],
-      [-7.2, 2.4],
-      [-9.8, -1.4],
-      [-7.2, -5.2],
-      [-2.2, -5],
-      [0, -2.4],
-    ]),
-  );
-  const right = new THREE.Mesh(wingR, wingMat);
-  right.position.set(2.4, 0.4, 0);
-  right.rotation.y = -0.55;
-  group.add(right);
-
-  const left = new THREE.Mesh(wingL, wingMat);
-  left.position.set(-2.4, 0.4, 0);
-  left.rotation.y = 0.55;
-  group.add(left);
-
-  const ring = new THREE.Mesh(
-    cachedGeometry('boss:ring', () => new THREE.TorusGeometry(5.4, 0.36, 6, 26)),
-    shipMaterial('boss:ring', 0xffd23f, 0xffb300, 2.2, 0.4, 0.3),
-  );
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = 1.6;
-  ring.name = 'ring';
-  group.add(ring);
-
-  return group;
+function hullMaterial(): THREE.MeshStandardMaterial {
+  if (hullMaterialRef) return hullMaterialRef;
+  hullMaterialRef = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    metalness: 0.38,
+    roughness: 0.46,
+    emissive: new THREE.Color(0x0b1024),
+    emissiveIntensity: 0.12,
+  });
+  return hullMaterialRef;
 }
 
 export type ShipKey = 'bee' | 'butterfly' | 'boss' | 'player';
 
 export function createShip(key: ShipKey): THREE.Group {
-  switch (key) {
-    case 'player':
-      return buildPlayer(PALETTES.player);
-    case 'bee':
-      return buildBee();
-    case 'butterfly':
-      return buildButterfly();
-    case 'boss':
-      return buildBoss();
+  const group = new THREE.Group();
+  const hull = new THREE.Mesh(shipHullGeometry(key), hullMaterial());
+  group.add(hull);
+
+  if (key === 'player') {
+    // Twin engine flares under the tail.
+    for (const side of [-1, 1]) {
+      const flare = glowSprite(0xffb066, 8, 0.55);
+      flare.position.set(side * 2, -8.2, 1);
+      group.add(flare);
+    }
   }
+
+  if (key === 'boss') {
+    // Flagships carry a slow halo so they read at a glance in a crowded fleet.
+    const halo = glowSprite(0x33ffaa, 20, 0.12);
+    halo.position.set(0, 0, -2.5);
+    group.add(halo);
+  }
+
+  return group;
 }
 
 // ---------------------------------------------------------------- particles --

@@ -132,6 +132,21 @@ export interface CachedSprite {
   palette: string[];
 }
 
+/**
+ * Raw pixel data, free of any DOM dependency.
+ *
+ * The enhanced renderer builds its 3D ships from exactly these pixels, which is
+ * what keeps the two views showing the same spacecraft.
+ */
+export interface SpritePixels {
+  width: number;
+  height: number;
+  /** Palette index per pixel; 0 is transparent. */
+  data: Uint8Array;
+  /** CSS colour per palette index. */
+  palette: string[];
+}
+
 interface SpriteDef {
   key: SpriteKey;
   w: number;
@@ -335,6 +350,24 @@ const FLAG: SpriteDef = {
 
 const DEFS: SpriteDef[] = [BEE, BUTTERFLY, BOSS, PLAYER, FLAG];
 const cache = new Map<SpriteKey, CachedSprite>();
+const pixelCache = new Map<SpriteKey, SpritePixels>();
+
+/** Palette-indexed pixels for a sprite, built once and shared. */
+export function spritePixels(key: SpriteKey): SpritePixels {
+  const cached = pixelCache.get(key);
+  if (cached) return cached;
+  const def = DEFS.find((d) => d.key === key)!;
+  const grid = new Grid(def.w, def.h);
+  def.draw(grid);
+  const pixels: SpritePixels = {
+    width: def.w,
+    height: def.h,
+    data: grid.data,
+    palette: def.palette,
+  };
+  pixelCache.set(key, pixels);
+  return pixels;
+}
 
 function renderToCanvas(def: SpriteDef, grid: Grid, scale: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
@@ -357,8 +390,9 @@ export function sprite(key: SpriteKey): CachedSprite {
   const cached = cache.get(key);
   if (cached) return cached;
   const def = DEFS.find((d) => d.key === key)!;
+  const pixels = spritePixels(key);
   const grid = new Grid(def.w, def.h);
-  def.draw(grid);
+  grid.data.set(pixels.data);
   const entry: CachedSprite = {
     width: def.w,
     height: def.h,

@@ -158,7 +158,7 @@ export class EnhancedRenderer implements GameRenderer {
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 0.92;
     renderer.setClearColor(0x03040c, 1);
     renderer.domElement.className = 'enh-canvas';
     host.appendChild(renderer.domElement);
@@ -182,7 +182,7 @@ export class EnhancedRenderer implements GameRenderer {
     scene.add(this.particles.points);
 
     this.playerGroup = createShip('player');
-    this.playerGroup.scale.setScalar(1.5);
+    this.playerGroup.scale.setScalar(1.45);
     scene.add(this.playerGroup);
 
     this.buildBulletPools(scene);
@@ -250,7 +250,7 @@ export class EnhancedRenderer implements GameRenderer {
     pmrem.compileEquirectangularShader();
     const target = pmrem.fromScene(envScene, 0.04);
     scene.environment = target.texture;
-    scene.environmentIntensity = 1.0;
+    scene.environmentIntensity = 0.85;
     pmrem.dispose();
     shell.geometry.dispose();
     (shell.material as THREE.Material).dispose();
@@ -259,7 +259,7 @@ export class EnhancedRenderer implements GameRenderer {
   private addLights(scene: THREE.Scene): void {
     scene.add(new THREE.AmbientLight(0x2a3866, 0.85));
 
-    const key = new THREE.DirectionalLight(0xdfe9ff, 2.6);
+    const key = new THREE.DirectionalLight(0xdfe9ff, 1.7);
     key.position.set(60, 160, 260);
     scene.add(key);
 
@@ -270,6 +270,11 @@ export class EnhancedRenderer implements GameRenderer {
     const cyan = new THREE.PointLight(0x3fd0ff, 2100, 700, 2);
     cyan.position.set(-170, -60, 140);
     scene.add(cyan);
+
+    // A soft fill from the camera side keeps the hull colours readable.
+    const fill = new THREE.PointLight(0xcfe0ff, 700, 900, 2);
+    fill.position.set(0, -70, 260);
+    scene.add(fill);
 
     const magenta = new THREE.PointLight(0xff4ea8, 1500, 700, 2);
     magenta.position.set(170, 110, 120);
@@ -416,7 +421,7 @@ export class EnhancedRenderer implements GameRenderer {
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
 
-    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.52, 0.55, 0.78);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.45, 0.55, 0.88);
     composer.addPass(bloom);
     this.bloom = bloom;
 
@@ -523,7 +528,7 @@ export class EnhancedRenderer implements GameRenderer {
       (this.nebula.material as THREE.ShaderMaterial).uniforms.uTime.value = this.time;
     }
     if (this.bloom) {
-      this.bloom.strength = 0.52 + this.stageFlash * 1.1 + (this.victoryStarted >= 0 ? 0.45 : 0);
+      this.bloom.strength = 0.45 + this.stageFlash * 1.1 + (this.victoryStarted >= 0 ? 0.45 : 0);
     }
 
     this.composer.render();
@@ -587,10 +592,10 @@ export class EnhancedRenderer implements GameRenderer {
       group.position.y = worldY(enemy.y);
       group.position.z = enemy.state === 'formation' ? -enemy.row * 4 : 4;
       group.rotation.z = -enemy.angle;
-      group.rotation.x = -0.12;
+      group.rotation.x = -0.34;
       group.rotation.y = Math.sin(this.time * 2 + enemy.phase) * 0.08 - enemy.angle * 0.4;
 
-      const scale = enemy.kind === 'boss' ? 1.72 : enemy.kind === 'butterfly' ? 1.44 : 1.5;
+      const scale = enemy.kind === 'boss' ? 1.62 : enemy.kind === 'butterfly' ? 1.28 : 1.36;
       const pulse = enemy.flash > 0 ? 1.18 : 1;
       group.scale.setScalar(scale * pulse);
 
@@ -626,7 +631,7 @@ export class EnhancedRenderer implements GameRenderer {
     if (!this.twinGroup && this.scene) {
       const twinGroup = createShip('player');
       twinGroup.name = 'twin';
-      twinGroup.scale.setScalar(1.5);
+      twinGroup.scale.setScalar(1.45);
       twinGroup.visible = false;
       this.scene.add(twinGroup);
       this.twinGroup = twinGroup;
@@ -871,3 +876,5 @@ export class EnhancedRenderer implements GameRenderer {
 }
 
 export { PALETTES };
+
+

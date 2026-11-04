@@ -21,7 +21,7 @@ Three view modes, switchable at any time without interrupting play:
 | Mode | What you see |
 | --- | --- |
 | **Classic** | A 224×288 arcade framebuffer: hand-authored pixel sprites, bitmap font, CRT scanlines, starfield. |
-| **Enhanced** | The same coordinates rendered as a lit Three.js scene: 3D ship models with a baked environment map, engine trails, volumetric tractor beam, GPU particles, bloom, shockwaves, camera parallax and shake. |
+| **Enhanced** | The same coordinates rendered as a lit Three.js scene: hulls extruded from the very pixel sprites the classic view draws, with a baked environment map, engine trails, volumetric tractor beam, GPU particles, bloom, shockwaves, camera parallax and shake. |
 | **Side by side** | Both at once, sharing one engine instance. |
 
 ![Enhanced](docs/media/enhanced.png)
@@ -255,9 +255,13 @@ docs/                reverse-engineering notes
 ## Assets and provenance
 
 Everything here is original code and original art. The sprites are drawn
-procedurally from pixel primitives in `src/render/classic/sprites.ts`; the 3D
-ships are built from three.js primitives; the sounds are synthesised. No ROM
-data, no ripped sprite sheets, no recorded audio.
+procedurally from pixel primitives in `src/render/classic/sprites.ts`, and the
+3D ships are those same sprites extruded into bevelled hulls
+(`src/render/enhanced/shipGeometry.ts`), so both views really are the same
+spacecraft. The sounds are synthesised. No ROM data, no ripped sprite sheets, no
+recorded audio.
+
+![Fighter](docs/media/fighter.png)
 
 The reference implementation studied for behaviour is the Emscripten port at
 `paoloseverinitest.azurewebsites.net/galaga/galaga.html`; what was learned from
@@ -266,3 +270,8 @@ it — and what was deliberately changed — is written up in
 
 Galaga is a trademark of Bandai Namco. This is a non-commercial study
 reimplementation produced for research and education.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Original code and original art; no ROM data,
+sprite sheets or recorded audio from the arcade machine are included.
