@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 
-import { shipHullGeometry } from './shipGeometry.js';
+import { shipGeometries } from './shipGeometry.js';
 
 // ---------------------------------------------------------------- textures --
 
@@ -72,26 +72,42 @@ export const PALETTES: Record<'bee' | 'butterfly' | 'boss' | 'player', ShipPalet
  * arrow fighter. Metal, bevelled edges and an additive rim shell are the modern
  * part.
  */
-let hullMaterialRef: THREE.MeshStandardMaterial | null = null;
+let hullMaterialRef: THREE.MeshLambertMaterial | null = null;
 
-function hullMaterial(): THREE.MeshStandardMaterial {
+function hullMaterial(): THREE.MeshLambertMaterial {
   if (hullMaterialRef) return hullMaterialRef;
-  hullMaterialRef = new THREE.MeshStandardMaterial({
+  // Lambert rather than a metal: the arcade palette is bright and flat, and a
+  // metallic surface muddies it into grey. A touch of emissive keeps the hulls
+  // from going black on faces turned away from the key light.
+  hullMaterialRef = new THREE.MeshLambertMaterial({
     vertexColors: true,
-    metalness: 0.38,
-    roughness: 0.46,
-    emissive: new THREE.Color(0x0b1024),
-    emissiveIntensity: 0.12,
+    emissive: new THREE.Color(0x141d33),
+    emissiveIntensity: 0.55,
   });
   return hullMaterialRef;
+}
+
+let glowMaterialRef: THREE.MeshBasicMaterial | null = null;
+
+function glowMaterial(): THREE.MeshBasicMaterial {
+  if (glowMaterialRef) return glowMaterialRef;
+  // Unlit and slightly over-bright: the eyes, canopy and wing tips keep the
+  // punch they have in the sprite and pick up the bloom.
+  glowMaterialRef = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    color: new THREE.Color(1.35, 1.35, 1.35),
+  });
+  return glowMaterialRef;
 }
 
 export type ShipKey = 'bee' | 'butterfly' | 'boss' | 'player';
 
 export function createShip(key: ShipKey): THREE.Group {
   const group = new THREE.Group();
-  const hull = new THREE.Mesh(shipHullGeometry(key), hullMaterial());
-  group.add(hull);
+  const { hull, glow } = shipGeometries(key);
+
+  group.add(new THREE.Mesh(hull, hullMaterial()));
+  if (glow) group.add(new THREE.Mesh(glow, glowMaterial()));
 
   if (key === 'player') {
     // Twin engine flares under the tail.

@@ -21,7 +21,7 @@ Three view modes, switchable at any time without interrupting play:
 | Mode | What you see |
 | --- | --- |
 | **Classic** | A 224×288 arcade framebuffer: hand-authored pixel sprites, bitmap font, CRT scanlines, starfield. |
-| **Enhanced** | The same coordinates rendered as a lit Three.js scene: hulls extruded from the very pixel sprites the classic view draws, with a baked environment map, engine trails, volumetric tractor beam, GPU particles, bloom, shockwaves, camera parallax and shake. |
+| **Enhanced** | The same coordinates rendered as a lit Three.js scene: hulls built from the very pixel sprites the classic view draws — supersampled, smoothed into rounded edges and extruded per palette colour, with bright accents on eyes, canopies and wing tips, plus a baked environment map, engine trails, volumetric tractor beam, GPU particles, bloom, shockwaves, camera parallax and shake. |
 | **Side by side** | Both at once, sharing one engine instance. |
 
 ![Enhanced](docs/media/enhanced.png)

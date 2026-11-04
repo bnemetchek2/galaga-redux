@@ -257,9 +257,9 @@ export class EnhancedRenderer implements GameRenderer {
   }
 
   private addLights(scene: THREE.Scene): void {
-    scene.add(new THREE.AmbientLight(0x2a3866, 0.85));
+    scene.add(new THREE.AmbientLight(0xc8d6ff, 1.25));
 
-    const key = new THREE.DirectionalLight(0xdfe9ff, 1.7);
+    const key = new THREE.DirectionalLight(0xffffff, 1.35);
     key.position.set(60, 160, 260);
     scene.add(key);
 
@@ -875,5 +875,6 @@ export class EnhancedRenderer implements GameRenderer {
 }
 
 export { PALETTES };
+
 
 

@@ -1,11 +1,11 @@
 /**
  * 3D ship geometry generated from the classic pixel sprites.
  *
- * The enhanced view used to be built from generic primitives, which read as
- * abstract shapes rather than Galaga ships. This module traces the *actual*
- * sprite silhouettes -- one contour per palette colour -- and extrudes them into
- * a layered hull, so the 3D fleet is recognisably the same fleet as the arcade
- * view, only with depth, bevelled edges and metal.
+ * The silhouettes come from the sprites themselves, but they are supersampled
+ * and smoothed before extrusion: tracing the raw 16x16 grid gives stair-stepped
+ * edges that read as "granular" once the ships are on screen. Upsampling the
+ * mask, tracing at 4x and relaxing the contour keeps the original shapes
+ * (antennae, wing tips, cockpits) while giving smooth outlines.
  */
 
 import * as THREE from 'three';
@@ -13,10 +13,30 @@ import { spritePixels, type SpriteKey } from '../classic/sprites.js';
 
 const DEPTH_BASE = 2.6;
 const DEPTH_STEP = 0.5;
-const BEVEL = 0.38;
+const BEVEL = 0.42;
+
+/** Supersampling factor for contour extraction. */
+const SS = 4;
+/** Contour relaxation passes, in supersampled units. */
+const SMOOTH_PASSES = 3;
+const SMOOTH_STRENGTH = 0.45;
+
+/** Palette colours brighter than this get the unlit "glow" treatment. */
+const GLOW_LUMINANCE = 0.72;
+/** Only small bright regions glow -- eyes and wing spots, not a whole body. */
+const GLOW_MAX_AREA = 8;
+
+function luminance(cssColor: string): number {
+  const hex = cssColor.replace('#', '');
+  if (hex.length !== 6) return 0;
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
 
 interface Loop {
-  /** Points in sprite grid space, y pointing down. */
+  /** Points in supersampled grid space, y pointing down. */
   points: Array<[number, number]>;
 }
 
@@ -70,18 +90,78 @@ function traceLoops(mask: Uint8Array, w: number, h: number): Loop[] {
   return loops;
 }
 
-/** Drop points that sit on a straight run. */
-function simplify(points: Array<[number, number]>): Array<[number, number]> {
-  if (points.length <= 3) return points;
+/** Drop points that sit within `tolerance` of the chord between their neighbours. */
+function simplify(points: Array<[number, number]>, tolerance = 0.35): Array<[number, number]> {
+  if (points.length <= 4) return points;
   const out: Array<[number, number]> = [];
   for (let i = 0; i < points.length; i++) {
     const prev = points[(i - 1 + points.length) % points.length];
     const cur = points[i];
     const next = points[(i + 1) % points.length];
-    const cross = (cur[0] - prev[0]) * (next[1] - cur[1]) - (cur[1] - prev[1]) * (next[0] - cur[0]);
-    if (cross !== 0) out.push(cur);
+    const cx = next[0] - prev[0];
+    const cy = next[1] - prev[1];
+    const len = Math.hypot(cx, cy) || 1;
+    const distance = Math.abs((cur[0] - prev[0]) * cy - (cur[1] - prev[1]) * cx) / len;
+    if (distance > tolerance) out.push(cur);
   }
-  return out.length >= 3 ? out : points;
+  return out.length >= 4 ? out : points;
+}
+
+/** Laplacian relaxation: rounds off the stair steps left by pixel contours. */
+function relax(
+  points: Array<[number, number]>,
+  passes: number,
+  strength: number,
+): Array<[number, number]> {
+  let current = points;
+  for (let pass = 0; pass < passes; pass++) {
+    const next: Array<[number, number]> = [];
+    for (let i = 0; i < current.length; i++) {
+      const prev = current[(i - 1 + current.length) % current.length];
+      const cur = current[i];
+      const then = current[(i + 1) % current.length];
+      next.push([
+        cur[0] + ((prev[0] + then[0]) / 2 - cur[0]) * strength,
+        cur[1] + ((prev[1] + then[1]) / 2 - cur[1]) * strength,
+      ]);
+    }
+    current = next;
+  }
+  return current;
+}
+
+/**
+ * Bilinear-supersample a binary mask. A 16x16 sprite becomes a 64x64 field, so
+ * the traced contour has quarter-pixel resolution and thin features (antennae,
+ * wing tips) survive the smoothing pass.
+ */
+function upsample(
+  mask: Uint8Array,
+  w: number,
+  h: number,
+): { data: Uint8Array; w: number; h: number } {
+  const width = w * SS;
+  const height = h * SS;
+  const data = new Uint8Array(width * height);
+  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : mask[y * w + x]);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const fx = (x + 0.5) / SS - 0.5;
+      const fy = (y + 0.5) / SS - 0.5;
+      const x0 = Math.floor(fx);
+      const y0 = Math.floor(fy);
+      const tx = fx - x0;
+      const ty = fy - y0;
+      const value =
+        at(x0, y0) * (1 - tx) * (1 - ty) +
+        at(x0 + 1, y0) * tx * (1 - ty) +
+        at(x0, y0 + 1) * (1 - tx) * ty +
+        at(x0 + 1, y0 + 1) * tx * ty;
+      data[y * width + x] = value >= 0.5 ? 1 : 0;
+    }
+  }
+  return { data, w: width, h: height };
 }
 
 function signedArea(points: Array<[number, number]>): number {
@@ -145,18 +225,28 @@ function mergeGeometries(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return merged;
 }
 
-const cache = new Map<SpriteKey, THREE.BufferGeometry>();
+const cache = new Map<SpriteKey, ShipGeometry>();
+
+export interface ShipGeometry {
+  /** Lit, vertex-coloured hull. */
+  hull: THREE.BufferGeometry;
+  /** Bright palette regions, rendered unlit so they glow and bloom. */
+  glow: THREE.BufferGeometry | null;
+}
 
 /**
  * One hull per ship, coloured per palette entry and layered by colour so the
- * wings, body and canopy sit at different reliefs.
+ * wings, body and canopy sit at different reliefs. Bright palette entries are
+ * duplicated as an unlit shell so eyes, canopies and wing tips keep the punch
+ * they have in the arcade original.
  */
-export function shipHullGeometry(key: SpriteKey): THREE.BufferGeometry {
+export function shipGeometries(key: SpriteKey): ShipGeometry {
   const cached = cache.get(key);
   if (cached) return cached;
 
   const { width: w, height: h, data, palette } = spritePixels(key);
   const parts: THREE.BufferGeometry[] = [];
+  const glowParts: THREE.BufferGeometry[] = [];
   const isPlayer = key === 'player';
 
   for (let colour = 1; colour < palette.length; colour++) {
@@ -170,11 +260,16 @@ export function shipHullGeometry(key: SpriteKey): THREE.BufferGeometry {
     }
     if (!used) continue;
 
-    // Convert to shape space (y up), then classify loops by containment.
-    const loops = traceLoops(mask, w, h).map((loop) => {
-      const points = loop.points.map(([x, y]) => [x, h - y] as [number, number]);
-      return signedArea(points) < 0 ? points.reverse() : points;
-    });
+    // Supersample, trace and relax: smooth hull edges that still follow the
+    // original sprite, then convert back to sprite units with y pointing up.
+    const up = upsample(mask, w, h);
+    const loops = traceLoops(up.data, up.w, up.h)
+      .map((loop) => {
+        const smoothed = simplify(relax(loop.points, SMOOTH_PASSES, SMOOTH_STRENGTH), 0.22);
+        const points = smoothed.map(([x, y]) => [x / SS, (up.h - y) / SS] as [number, number]);
+        return signedArea(points) < 0 ? points.reverse() : points;
+      })
+      .filter((points) => points.length >= 3 && Math.abs(signedArea(points)) > 0.5);
     loops.sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)));
 
     const outers: Array<{ points: Array<[number, number]>; area: number }> = [];
@@ -205,6 +300,12 @@ export function shipHullGeometry(key: SpriteKey): THREE.BufferGeometry {
       geometry.translate(0, 0, -depth / 2);
       paint(geometry, palette[colour]);
       parts.push(geometry);
+
+      if (luminance(palette[colour]) > GLOW_LUMINANCE && outer.area <= GLOW_MAX_AREA) {
+        const accent = geometry.clone();
+        accent.translate(0, 0, 0.3);
+        glowParts.push(accent);
+      }
     });
   }
 
@@ -213,7 +314,11 @@ export function shipHullGeometry(key: SpriteKey): THREE.BufferGeometry {
   merged.computeVertexNormals();
   if (isPlayer) merged.computeBoundingSphere();
 
-  cache.set(key, merged);
-  return merged;
+  const glow = glowParts.length > 0 ? mergeGeometries(glowParts) : null;
+  if (glow) glow.translate(-w / 2, -h / 2, 0);
+
+  const result: ShipGeometry = { hull: merged, glow };
+  cache.set(key, result);
+  return result;
 }
 
